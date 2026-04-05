@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>BioGas Plant | Smart Control Dashboard</title>
+  <!-- Google Fonts & Font Awesome -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(145deg, #e9f0f5 0%, #d9e2ec 100%);
+      font-family: 'Inter', sans-serif;
+      padding: 2rem 1.5rem;
+      min-height: 100vh;
+      color: #1a2c3e;
+    }
+
+    /* Main container */
+    .dashboard-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 2.5rem;
+      background: rgba(255,255,255,0.5);
+      backdrop-filter: blur(8px);
+      padding: 1rem 2rem;
+      border-radius: 3rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+    }
+    .title-section h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #1e6f3f, #0f4c2d);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -0.3px;
+    }
+    .title-section p {
+      font-size: 0.85rem;
+      color: #2c5a3b;
+      font-weight: 500;
+    }
+    .live-badge {
+      background: #1e6f3f20;
+      padding: 0.5rem 1.2rem;
+      border-radius: 2rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #1e6f3f;
+      border: 1px solid #1e6f3f40;
+    }
+    .live-badge i {
+      margin-right: 6px;
+      font-size: 0.7rem;
+      color: #2ecc71;
+    }
+
+    /* KPI Cards Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.8rem;
+      margin-bottom: 2.5rem;
+    }
+    .card {
+      background: white;
+      border-radius: 2rem;
+      padding: 1.5rem;
+      box-shadow: 0 20px 35px -12px rgba(0,0,0,0.1);
+      transition: all 0.25s ease;
+      border: 1px solid rgba(255,255,255,0.5);
+      backdrop-filter: blur(2px);
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 25px 40px -14px rgba(0,0,0,0.15);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1rem;
+      border-bottom: 2px solid #eef2f6;
+      padding-bottom: 0.75rem;
+    }
+    .card-header i {
+      font-size: 1.8rem;
+      color: #2c7a4b;
+    }
+    .card-header h3 {
+      font-weight: 600;
+      font-size: 1.2rem;
+      color: #1e3a2f;
+    }
+    .card-value {
+      font-size: 2.6rem;
+      font-weight: 800;
+      margin: 0.5rem 0;
+      color: #0f2c1f;
+      line-height: 1.2;
+    }
+    .card-unit {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #5f7f6e;
+    }
+    .sub-text {
+      font-size: 0.75rem;
+      color: #6c8b7a;
+      margin-top: 0.5rem;
+    }
+    .progress-bar-bg {
+      background: #e2e8f0;
+      border-radius: 30px;
+      height: 12px;
+      margin: 12px 0 8px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      background: linear-gradient(90deg, #2ecc71, #27ae60);
+      width: 0%;
+      height: 100%;
+      border-radius: 30px;
+      transition: width 0.4s ease;
+    }
+
+    /* Motors & Controls */
+    .controls-section {
+      background: white;
+      border-radius: 2rem;
+      padding: 1.8rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.05);
+    }
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #1e3a2f;
+      border-left: 5px solid #2ecc71;
+      padding-left: 1rem;
+    }
+    .motors-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .motor-card {
+      flex: 1;
+      min-width: 200px;
+      background: #f9fbfd;
+      border-radius: 1.5rem;
+      padding: 1.4rem;
+      text-align: center;
+      transition: 0.2s;
+      border: 1px solid #e2edf2;
+    }
+    .motor-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .motor-name {
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin: 0.5rem 0;
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 58px;
+      height: 30px;
+      margin: 12px 0;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #cbd5e1;
+      transition: 0.3s;
+      border-radius: 30px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 24px;
+      width: 24px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #2ecc71;
+    }
+    input:checked + .slider:before {
+      transform: translateX(28px);
+    }
+    .motor-status {
+      font-size: 0.75rem;
+      font-weight: 500;
+      background: #eef2f5;
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+    .remote-badge {
+      font-size: 0.7rem;
+      color: #2c7a4b;
+      margin-top: 8px;
+    }
+
+    /* Alert Banner */
+    .alert-banner {
+      background: #fff5e8;
+      border-left: 8px solid #f39c12;
+      border-radius: 1rem;
+      padding: 0.8rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.8rem;
+      transition: 0.2s;
+    }
+    .alert-banner.warning {
+      background: #ffe6e5;
+      border-left-color: #e74c3c;
+    }
+    .alert-banner i {
+      font-size: 1.6rem;
+    }
+    .alert-text {
+      font-weight: 600;
+      flex: 1;
+    }
+
+    /* Footer / timestamp */
+    .footer {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      color: #5f7f6e;
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem;
+      }
+      .card-value {
+        font-size: 2rem;
+      }
+      .header {
+        flex-direction: column;
+        gap: 0.8rem;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="dashboard-container">
+  <div class="header">
+    <div class="title-section">
+      <h1><i class="fas fa-seedling" style="color: #2ecc71;"></i> BioGas Sentinel</h1>
+      <p>Smart monitoring & control | Real-time anaerobic digester</p>
+    </div>
+    <div class="live-badge">
+      <i class="fas fa-circle"></i> LIVE SYNC
+    </div>
+  </div>
+
+  <!-- KPI Grid -->
+  <div class="kpi-grid">
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-tint"></i>
+        <h3>Water Level</h3>
+      </div>
+      <div class="card-value"><span id="levelValue">0</span><span class="card-unit">%</span></div>
+      <div class="progress-bar-bg"><div class="progress-fill" id="levelFill"></div></div>
+      <div class="sub-text"><i class="fas fa-chart-line"></i> Slurry level in digester</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-water"></i>
+        <h3>Flow Rate</h3>
+      </div>
+      <div class="card-value"><span id="flowValue">0.00</span><span class="card-unit"> L/min</span></div>
+      <div class="sub-text"><i class="fas fa-exchange-alt"></i> Circulation / biogas output</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-gauge-high"></i>
+        <h3>Pressure (HX711)</h3>
+      </div>
+      <div class="card-value"><span id="pressureValue">—</span><span class="card-unit"> ADC</span></div>
+      <div class="sub-text"><i class="fas fa-microchip"></i> Raw sensor value | threshold: <strong id="thresholdShow">2.936M</strong></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-bell"></i>
+        <h3>System Status</h3>
+      </div>
+      <div class="card-value" id="alertStatusText" style="font-size: 1.6rem;">🟢 Normal</div>
+      <div class="sub-text" id="alertDetailMsg">No active alerts</div>
+    </div>
+  </div>
+
+  <!-- Motors & remote control section -->
+  <div class="controls-section">
+    <div class="section-title">
+      <i class="fas fa-microchip"></i> Actuators & Remote Override
+    </div>
+    <div class="motors-panel">
+      <div class="motor-card">
+        <div class="motor-icon"><i class="fas fa-tachometer-alt"></i></div>
+        <div class="motor-name">Mixer Motor</div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="mixerToggle">
+          <span class="slider"></span>
+        </label>
+        <div><span class="motor-status" id="mixerStatusText">OFF</span></div>
+        <div class="remote-badge"><i class="fas fa-globe"></i> Remote control enabled</div>
+      </div>
+      <div class="motor-card">
+        <div class="motor-icon"><i class="fas fa-vibrate"></i></div>
+        <div class="motor-name">Vibration Motor</div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="vibToggle" disabled>
+          <span class="slider"></span>
+        </label>
+        <div><span class="motor-status" id="vibStatusText">OFF</span></div>
+        <div class="remote-badge"><i class="fas fa-chart-line"></i> Auto (pressure based)</div>
+      </div>
+    </div>
+    <div class="sub-text" style="margin-top: 1rem; text-align: center; font-size: 0.7rem;">
+      <i class="fas fa-info-circle"></i> Mixer toggles via Firebase RTDB: /Biogas/RemoteMixer. Auto logic stops above 90% or below 45% water level.
+    </div>
+  </div>
+
+  <!-- Alert banner dynamic -->
+  <div id="alertDynamicBanner" class="alert-banner" style="display: none;">
+    <i class="fas fa-exclamation-triangle"></i>
+    <div class="alert-text" id="alertBannerMsg">⚠️ System anomaly detected</div>
+  </div>
+
+  <div class="footer">
+    <i class="far fa-clock"></i> Last update: <span id="timestamp">—</span> | Firebase RTDB live sync
+  </div>
+</div>
+
+<script>
+  // ------------------- FIREBASE CONFIGURATION -------------------
+  // Replace with your own config (same as Arduino credentials)
+  const firebaseConfig = {
+    databaseURL: "https://project-cbae5-default-rtdb.asia-southeast1.firebasedatabase.app/",
+    // No apiKey needed for RTDB with legacy token, but we set for compat
+    projectId: "project-cbae5",
+  };
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+
+  // DOM elements
+  const levelSpan = document.getElementById('levelValue');
+  const levelFill = document.getElementById('levelFill');
+  const flowSpan = document.getElementById('flowValue');
+  const pressureSpan = document.getElementById('pressureValue');
+  const alertStatusSpan = document.getElementById('alertStatusText');
+  const alertDetailMsg = document.getElementById('alertDetailMsg');
+  const alertBannerDiv = document.getElementById('alertDynamicBanner');
+  const alertBannerMsgSpan = document.getElementById('alertBannerMsg');
+  const mixerToggle = document.getElementById('mixerToggle');
+  const mixerStatusText = document.getElementById('mixerStatusText');
+  const vibStatusText = document.getElementById('vibStatusText');
+  const timestampSpan = document.getElementById('timestamp');
+
+  // Local state for remote mixer control
+  let currentMixerState = false;     // from Firebase
+  let currentVibState = false;
+  let currentAlert = false;
+  let currentWaterLevel = 0;
+  let currentPressure = 0;
+  let currentFlow = 0;
+
+  // Helper: update UI for Mixer (sync toggle switch without triggering loop)
+  function updateMixerUI(state) {
+    if (mixerToggle.checked !== state) {
+      mixerToggle.checked = state;
+    }
+    mixerStatusText.innerText = state ? "ON 🔄" : "OFF";
+    mixerStatusText.style.background = state ? "#2ecc7122" : "#eef2f5";
+  }
+
+  function updateVibUI(state) {
+    vibStatusText.innerText = state ? "ACTIVE ⚡" : "STANDBY";
+    vibStatusText.style.background = state ? "#f39c1222" : "#eef2f5";
+    // vibration toggle is disabled for manual, but we reflect status
+  }
+
+  // Evaluate alert based on local logic: matches Arduino conditions
+  function computeAlert(waterLevel, pressure, flowRate, mixerMotorFlag, motorStartTimeFlag, flowFaultSim) {
+    // We'll use waterLevel > 90 => overflow alert
+    // pressure == -1 => sensor error
+    // flowFault: when mixer motor runs >5s and flowRate < 0.5 (but we need to simulate motor run time)
+    // For simplicity, in web we recalc: if mixerMotor true and flowRate < 0.5 -> potential fault but need "running for 5 sec"
+    // Since we don't keep motor start time perfectly, we'll emulate: if mixerMotor && flowRate < 0.5 => consider flow fault after some seconds? 
+    // Better: mimic same condition: mixer active and flow < 0.5 for consistent display; we add a timer concept for demonstration
+    // We'll keep it aligned with alert logic in code: flowFault = (mixerMotor && flowRate < 0.5) (we ignore exact 5s for web demo simplicity but give warning)
+    let flowFault = (mixerMotorFlag && currentFlow < 0.5);
+    let overflow = (waterLevel > 90);
+    let pressureErr = (pressure === -1 || pressure === null);
+    
+    if (overflow) return { alert: true, reason: "OVERFLOW! Water level > 90%" };
+    if (pressureErr) return { alert: true, reason: "PRESSURE SENSOR ERROR (no signal)" };
+    if (flowFault) return { alert: true, reason: "⚠️ NO FLOW DETECTED! Mixer running but flow rate low." };
+    return { alert: false, reason: "System operational ✅" };
+  }
+
+  // Upload remote mixer toggle to Firebase (when user toggles)
+  async function setRemoteMixer(value) {
+    try {
+      await firebase.database().ref('/Biogas/RemoteMixer').set(value);
+      console.log("RemoteMixer set to", value);
+    } catch (err) {
+      console.error("Firebase update error", err);
+    }
+  }
+
+  // Update all UI based on latest data
+  function refreshDashboard() {
+    // Update water level progress & numeric
+    levelSpan.innerText = currentWaterLevel;
+    levelFill.style.width = `${Math.min(100, Math.max(0, currentWaterLevel))}%`;
+    if (currentWaterLevel > 90) levelFill.style.background = "#e67e22";
+    else levelFill.style.background = "linear-gradient(90deg, #2ecc71, #27ae60)";
+    
+    flowSpan.innerText = currentFlow.toFixed(2);
+    if (currentPressure === -1 || currentPressure === null || isNaN(currentPressure)) {
+      pressureSpan.innerText = "ERROR";
+    } else {
+      pressureSpan.innerText = currentPressure;
+    }
+    
+    // Evaluate alert
+    const { alert, reason } = computeAlert(currentWaterLevel, currentPressure, currentFlow, currentMixerState, false, false);
+    currentAlert = alert;
+    if (alert) {
+      alertStatusSpan.innerHTML = "🔴 ALERT";
+      alertStatusSpan.style.color = "#e74c3c";
+      alertDetailMsg.innerText = reason;
+      alertBannerDiv.style.display = "flex";
+      alertBannerDiv.classList.add("warning");
+      alertBannerMsgSpan.innerText = reason;
+    } else {
+      alertStatusSpan.innerHTML = "🟢 NORMAL";
+      alertStatusSpan.style.color = "#27ae60";
+      alertDetailMsg.innerText = reason;
+      alertBannerDiv.style.display = "none";
+    }
+    
+    // Update timestamp
+    const now = new Date();
+    timestampSpan.innerText = now.toLocaleTimeString() + " " + now.toLocaleDateString();
+  }
+
+  // Listen to ALL firebase paths and keep local mirrors, then update UI
+  function initFirebaseListeners() {
+    // Water Level
+    const levelRef = database.ref('/Biogas/Level');
+    levelRef.on('value', (snapshot) => {
+      const val = snapshot.val();
+      if (typeof val === 'number') currentWaterLevel = Math.min(100, Math.max(0, val));
+      else if (typeof val === 'string') currentWaterLevel = parseInt(val) || 0;
+      else currentWaterLevel = 0;
+      refreshDashboard();
+    });
+    
+    // Flow Rate
+    const flowRef = database.ref('/Biogas/Flow');
+    flowRef.on('value', (snapshot) => {
+      const val = snapshot.val();
+      if (typeof val === 'number') currentFlow = val;
+      else if (typeof val === 'string') currentFlow = parseFloat(val) || 0;
+      else currentFlow = 0;
+      refreshDashboard();
+    });
+    
+    // Pressure
+    const pressureRef = database.ref('/Biogas/Pressure');
+    pressureRef.on('value', (snapshot) => {
+      const val = snapshot.val();
+      if (val === -1 || val === "-1") currentPressure = -1;
+      else if (typeof val === 'number') currentPressure = val;
+      else if (typeof val === 'string') currentPressure = parseInt(val);
+      else currentPressure = 0;
+      refreshDashboard();
+    });
+    
+    // Mixer Motor state (from Arduino logic)
+    const mixerRef = database.ref('/Biogas/Mixer');
+    mixerRef.on('value', (snapshot) => {
+      const state = snapshot.val();
+      if (typeof state === 'boolean') {
+        currentMixerState = state;
+      } else if (state === 1 || state === "true") currentMixerState = true;
+      else currentMixerState = false;
+      updateMixerUI(currentMixerState);
+      refreshDashboard();   // re-evaluate alert because flow fault depends on mixer state
+    });
+    
+    // Vibration Motor state
+    const vibRef = database.ref('/Biogas/Vibration');
+    vibRef.on('value', (snapshot) => {
+      const state = snapshot.val();
+      if (typeof state === 'boolean') currentVibState = state;
+      else currentVibState = false;
+      updateVibUI(currentVibState);
+      refreshDashboard();
+    });
+    
+    // Alert flag (optional for consistency)
+    const alertRef = database.ref('/Biogas/Alert');
+    alertRef.on('value', (snapshot) => {
+      // we recompute alert locally anyway, but use for sync
+      refreshDashboard();
+    });
+    
+    // RemoteMixer: we need to sync toggle switch and also send updates when user interacts
+    const remoteMixerRef = database.ref('/Biogas/RemoteMixer');
+    remoteMixerRef.on('value', (snapshot) => {
+      const remoteVal = snapshot.val();
+      let remoteBool = false;
+      if (typeof remoteVal === 'boolean') remoteBool = remoteVal;
+      else if (remoteVal === 1 || remoteVal === "true") remoteBool = true;
+      // Important: we do NOT automatically override mixer toggle UI? The arduino uses RemoteMixer to control relay.
+      // But here we want to reflect the current remote setpoint. For UI consistency, we set toggle to remoteBool value.
+      // However we must avoid loops: user toggling will set RemoteMixer -> this listener updates toggle again.
+      if (mixerToggle.checked !== remoteBool) {
+        mixerToggle.checked = remoteBool;
+      }
+      // Additionally we reflect that remote mixer overrides mixer status? But /Biogas/Mixer is actual state.
+      // We keep both. For clarity, show remote setpoint as control toggle.
+      // Also show that remote command is active
+    });
+  }
+  
+  // Write listener for mixerToggle changes -> upload to Firebase RemoteMixer
+  mixerToggle.addEventListener('change', (e) => {
+    const newState = e.target.checked;
+    setRemoteMixer(newState);
+    // Provide instant local feedback: the actual mixer will be updated by arduino via RemoteMixer, but we can show optimistic update
+    // However we must wait for /Biogas/Mixer update from Arduino. But we keep remote consistency.
+    console.log("Remote mixer command sent:", newState);
+    // Optionally show tooltip message
+  });
+  
+  // Fetch initial data and also fallback for pressure threshold display
+  const thresholdSpan = document.getElementById('thresholdShow');
+  if (thresholdSpan) thresholdSpan.innerText = "2.936M";
+  
+  // Helper to also listen to initial presence
+  function startFirebaseSync() {
+    initFirebaseListeners();
+    // Also get one-time to ensure complete values
+    database.ref('/Biogas').once('value').then((snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        if (data.Level !== undefined) currentWaterLevel = data.Level;
+        if (data.Flow !== undefined) currentFlow = data.Flow;
+        if (data.Pressure !== undefined) currentPressure = data.Pressure;
+        if (data.Mixer !== undefined) currentMixerState = data.Mixer;
+        if (data.Vibration !== undefined) currentVibState = data.Vibration;
+        refreshDashboard();
+        updateMixerUI(currentMixerState);
+        updateVibUI(currentVibState);
+      }
+    }).catch(err => console.warn("Initial fetch warning", err));
+  }
+  
+  startFirebaseSync();
+  
+  // Optional: simulated demo values? No, we rely on real Firebase data.
+  // In case the database is empty for some nodes, we use defaults.
+  // For pressure sensor missing value we display '—' 
+  // Additionally we check for /Biogas/RemoteMixer path existence.
+  
+  // Additional: if user wants to know auto mode for vibration, we show tooltip.
+  console.log("Biogas Dashboard ready — Waiting for ESP32 data");
+  
+  // For testing fallback: ensure that when pressure missing we show correct alert
+  setInterval(() => {
+    // Force refresh from listeners already updates
+    refreshDashboard();
+  }, 1000);
+</script>
+</body>
+</html>
